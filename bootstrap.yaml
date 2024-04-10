@@ -1,10 +1,27 @@
 ---
-- hosts: "{{ target }}"
+- name: Validate target variable
+  hosts: localhost
   gather_facts: no
-  vars_prompt:
-  - name: target
-    prompt: "Enter node server(s) (separate by ',')"
-    private: no
-    when: not target
+  tasks:
+  - name: Prompt target if necessary
+    when: target is undefined
+    block:
+    - name: Conditionally prompt for ssh/sudo password
+      ansible.builtin.pause:
+        prompt: "Enter node server(s) (separate by ',')"
+      register: target_promt
+    - name: Description
+      ansible.builtin.set_fact:
+        target: "{{ hostvars.localhost.target_promt.user_input }}"
+  - name: Add target host to group bootstrap
+    ansible.builtin.add_host:
+      name: "{{ target }}"
+      groups: bootstrap
+- name: Apply bootstrap role
+  hosts: bootstrap
+  gather_facts: no
   roles:
   - bootstrap
+  # tasks:
+  # - name: Ping target
+  #   ansible.builtin.ping:
